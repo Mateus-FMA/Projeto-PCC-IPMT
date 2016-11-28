@@ -15,7 +15,28 @@ const std::string kANSIResetAll = "\033[0m";
 }  // namespace
 
 void PrintHelp() {
-  std::cout << "Usage: ipmt <mode> [options] pattern textfile [textfile ...]" << std::endl;
+  std::cout << "Usage: ipmt <mode> [options] pattern indexfile [indexfile ...], where: \n\n\t- \""
+            << "<mode>\" specifies a feature implemented by this tool. Supported modes\n\tare"
+            << " \"index\" and \"search\". To see the options supported by each mode,\n\ttype"
+            << " \"ipmt <mode> -h\" or \"ipmt <mode> --help\".\n\n\t- \"pattern\" is the input"
+            << " pattern to be found on text.\n\n\t- \"indexfile\" is the index which represents"
+            << " the compressed text. More\n\tthan one index file may be specified on search mode."
+            << " Wildcards are also\n\tsupported on this mode." << std::endl;
+}
+
+void PrintIndexModeHelp() {
+  std::cout << "Index mode options:\n\n    -c --compression\tSpecifies the compression algorithm"
+            << " used to build the\n\t\t\tindex file.\n    " << std::setw(16) << std::left
+            << "-i --indextype" << "\tDetermines the index structure to represent the text."
+            << std::endl;
+}
+
+void PrintSearchModeHelp() {
+  std::cout << "Search mode options:\n\n    " << std::setw(12) << std::left << "-c --count"
+            << "\tPrint only the number of occurrences of the pattern(s)\n\t\t\tin the text.\n    "
+            << "-p --pattern\tIf this option is enabled, then the \"pattern\" argument\n\t\t\twill"
+            << " be interpreted as a text file containing all the\n\t\t\tpatterns to be found in"
+            << " the text." << std::endl;
 }
 
 std::string PrintOccurrences(const std::vector<int> &occurrences, const std::string &text,

@@ -11,6 +11,9 @@ namespace ipmt {
 typedef option Option;
 
 void PrintHelp();
+void PrintIndexModeHelp();
+void PrintSearchModeHelp();
+
 std::string PrintOccurrences(const std::vector<int> &occurrences, const std::string &text,
                              int pattern_length);
 std::vector<std::string> GetFilenames(const std::string &regex);
