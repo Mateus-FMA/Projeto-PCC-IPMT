@@ -4,7 +4,7 @@ INCLUDE_DIR = include
 OBJ_DIR = bin
 SRC_DIR = src
 
-_OBJS = main.o utils.o
+_OBJS = main.o utils.o sufarray.o
 OBJS = $(patsubst %, $(OBJ_DIR)/%, $(_OBJS))
 
 pmt: $(OBJS)

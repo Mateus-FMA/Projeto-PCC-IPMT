@@ -104,31 +104,31 @@ std::vector<int> build_sarr_naive(const std::string &txt){
 
     return index;
 }
-int sufArray()
-{
-    std::string txt = "baobab";
+//int sufArray()
+//{
+//    std::string txt = "baobab";
 
-    std::vector<int> sa = build_sarr_naive(txt);
-    //print sa;
-    std::string pat= "ba";
-    cout<<"here"<<endl;
+//    std::vector<int> sa = build_sarr_naive(txt);
+//    //print sa;
+//    std::string pat= "ba";
+//    cout<<"here"<<endl;
 
-    int l = succ1(txt, sa, pat);
-    cout<<"succ1";
-    //print "succ=",L
-    int r = pred1(txt, sa, pat);
-    cout<<l<<""<<r<<endl;
-    //print "pred=", R
-    std::vector<int> occ(l-r);
-    for (int k=r+1;k<l+1;k++){
-        occ[k-r-1]=sa[k];
-    }
-    //occ.sort();
-    //print occ;
-    //cout<<"sequence:"<<endl;
+//    int l = succ1(txt, sa, pat);
+//    cout<<"succ1";
+//    //print "succ=",L
+//    int r = pred1(txt, sa, pat);
+//    cout<<l<<""<<r<<endl;
+//    //print "pred=", R
+//    std::vector<int> occ(l-r);
+//    for (int k=r+1;k<l+1;k++){
+//        occ[k-r-1]=sa[k];
+//    }
+//    //occ.sort();
+//    //print occ;
+//    //cout<<"sequence:"<<endl;
 
-    
-    return 0;
-}
+//    
+//    return 0;
+//}
 
 
