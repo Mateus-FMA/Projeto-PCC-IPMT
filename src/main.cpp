@@ -49,9 +49,11 @@ int main(int argc, char *argv[]) {
           }
 
           break;
+
         case 'h':
           ipmt::PrintIndexModeHelp();
-          break;
+          return 0;
+
         case 'i':
           option_arg = optarg;
 
@@ -63,6 +65,7 @@ int main(int argc, char *argv[]) {
           }
 
           break;
+
         default:
           std::cout << "Invalid option argument." << std::endl;
           return EXIT_FAILURE;
@@ -95,6 +98,7 @@ int main(int argc, char *argv[]) {
         text.resize(file_size);
         ifs.read(&text[0], text.size());
 
+        // TODO(Mateus/Valdemir): implementar a lógica correta dessa parte.
         // Build index.
 
 
@@ -102,14 +106,20 @@ int main(int argc, char *argv[]) {
         ipmt::DynamicBitset code;
 
         if (compression_type == ipmt::CompressionType::kHuffman) {
-          ipmt::HuffmanHeapNode root;
-          ipmt::HuffmanEncode(text, &code, &root);
+          ipmt::CodeTable code_table;
+          ipmt::HuffmanEncode(text, &code, &code_table);
+          std::cout << code.ToString() << std::endl;
+
+          ipmt::HuffmanHeapNode *root = ipmt::BuildTreeFromTable(code_table);
+          std::string decoded_text = ipmt::HuffmanDecode(code, root);          
+          std::cout << decoded_text << std::endl;
+
+          delete root;
         } else {
           // ipmt::LZ78Encode(text, &code);
         }
 
-        // Write index and encoded text to index file.
-        std::cout << code.ToString() << std::endl;
+        // Write encoded text to index file.
       }
     }
   } else if (!mode.compare("search")){
@@ -131,12 +141,15 @@ int main(int argc, char *argv[]) {
         case 'c':
           print_num_occ_only = true;
           break;
+
         case 'h':
           ipmt::PrintSearchModeHelp();
-          break;
+          return 0;
+
         case 'p':
           read_pattern_files = true;
           break;
+
         default:
           std::cout << "Invalid option argument." << std::endl;
           return EXIT_FAILURE;

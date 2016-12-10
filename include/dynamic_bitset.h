@@ -7,7 +7,7 @@ namespace ipmt {
 
 typedef unsigned char byte_t;
 
-const int kDefaultBitsetCapacity = 1 << 0;
+const int kDefaultBitsetCapacity = 1 << 3;
 
 // This class contains only the needed operations of a bitset for this project, it does not
 // implements all features of a real bitset.
@@ -23,8 +23,9 @@ class DynamicBitset {
   bool operator[](int index) const;
   DynamicBitset& operator=(const DynamicBitset &bitset);
 
+  void Flush();
   void PushBack(bool value);
-  std::string ToString();
+  std::string ToString() const;
   
   // Accessors.
   const byte_t* data() const { return data_; }  // Returns the inner container.

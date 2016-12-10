@@ -46,6 +46,11 @@ DynamicBitset& DynamicBitset::operator=(const DynamicBitset &bitset) {
   return *this;
 }
 
+void DynamicBitset::Flush() {
+  std::fill_n(data_, capacity_, 0);
+  size_ = 0;
+}
+
 void DynamicBitset::PushBack(bool value) {
   if (size_ == kWordSize * capacity_) Resize();
 
@@ -57,7 +62,7 @@ void DynamicBitset::PushBack(bool value) {
   else data_[word_index] &= ~(1 << bit_index);
 }
 
-std::string DynamicBitset::ToString() {
+std::string DynamicBitset::ToString() const {
   std::string result;
   result.reserve(size_);
   
