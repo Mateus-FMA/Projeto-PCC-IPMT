@@ -1,6 +1,7 @@
 #include "dynamic_bitset.h"
 
 #include <algorithm>
+#include <iostream>
 
 namespace ipmt {
 
@@ -11,6 +12,11 @@ DynamicBitset::DynamicBitset(const DynamicBitset &bitset)
       capacity_(bitset.capacity()),
       size_(bitset.size()) {
   std::copy_n(bitset.data(), bitset.capacity(), data_);
+}
+
+void DynamicBitset::Flush() {
+  std::fill_n(data_, capacity_, 0);
+  size_ = 0;
 }
 
 void DynamicBitset::Resize() {
@@ -46,9 +52,24 @@ DynamicBitset& DynamicBitset::operator=(const DynamicBitset &bitset) {
   return *this;
 }
 
-void DynamicBitset::Flush() {
-  std::fill_n(data_, capacity_, 0);
-  size_ = 0;
+void DynamicBitset::Append(const DynamicBitset &bitset) {
+  for (int i = 0; i < bitset.size(); ++i) {
+    PushBack(bitset[i]);
+  }
+}
+
+DynamicBitset DynamicBitset::GetSubsetFromInterval(int start, int end) const {
+  DynamicBitset subset;
+
+  for (int i = start; i < end; ++i) {
+    if (i < size_) {
+      int word_index = i / kWordSize;
+      int bit_index = i % kWordSize;
+      subset.PushBack((data_[word_index]) & (1 << bit_index));
+    }
+  }
+
+  return subset;
 }
 
 void DynamicBitset::PushBack(bool value) {
@@ -60,6 +81,21 @@ void DynamicBitset::PushBack(bool value) {
 
   if (value) data_[word_index] |= 1 << bit_index;
   else data_[word_index] &= ~(1 << bit_index);
+}
+
+byte_t DynamicBitset::ReadWord(int index) const {
+  byte_t result = 0;
+
+  for (int i = 0; i < kWordSize; ++i) {
+    int curr_index = index + i;
+    if (curr_index < size_) {
+      int word_index = curr_index / kWordSize;
+      int bit_index = curr_index % kWordSize;
+      result |= (data_[word_index]) & (1 << bit_index);
+    }
+  }
+
+  return result;
 }
 
 std::string DynamicBitset::ToString() const {

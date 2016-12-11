@@ -16,15 +16,19 @@ class DynamicBitset {
   DynamicBitset()
       : data_(new byte_t[kDefaultBitsetCapacity]),
         capacity_(kDefaultBitsetCapacity),
-        size_(0) {}
+        size_(0) { Flush(); }
   DynamicBitset(const DynamicBitset &bitset);
   ~DynamicBitset() { delete[] data_; }
-  
+    
+  static const int kWordSize;
+
   bool operator[](int index) const;
   DynamicBitset& operator=(const DynamicBitset &bitset);
 
-  void Flush();
+  void Append(const DynamicBitset &bitset);
+  DynamicBitset GetSubsetFromInterval(int start, int end) const;
   void PushBack(bool value);
+  byte_t ReadWord(int index) const;
   std::string ToString() const;
   
   // Accessors.
@@ -32,9 +36,8 @@ class DynamicBitset {
   int capacity() const { return capacity_; }  // Returns the inner container capacity.
   int size() const { return size_; }  // Returns the number of elements of the bitset.
     
- private:
-  static const int kWordSize;
-  
+ private:  
+  void Flush();
   void Resize();
 
   byte_t *data_;

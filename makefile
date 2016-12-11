@@ -4,7 +4,7 @@ INCLUDE_DIR = include
 OBJ_DIR = bin
 SRC_DIR = src
 
-_OBJS = dynamic_bitset.o huffman.o main.o sufarray.o utils.o
+_OBJS = dynamic_bitset.o huffman.o lz78.o main.o sufarray.o utils.o
 OBJS = $(patsubst %, $(OBJ_DIR)/%, $(_OBJS))
 
 pmt: $(OBJS)
