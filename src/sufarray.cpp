@@ -1,134 +1,102 @@
-#include <iostream>
-#include <bits/stdc++.h>
-using namespace std;
-bool ltm(string a, string b, int m){
-    int l=a.length();
-    int n=b.length();
-    return a.substr(0,min(l,m)) < b.substr(0,min(n,m));
+#include "sufarray.h"
 
-}
+#include <algorithm>
 
-bool leqm(const std::string &a, const std::string &b, int m){
-    int l=a.length();
-    int n=b.length();
-    return a.substr(0,min(l,m)) <= b.substr(0,min(n,m));
-}
+namespace ipmt {
 
-int succ1(const std::string &txt,std::vector<int> sa, const std::string &pat){
+// TODO(Mateus/Valdemir): we do not use LCP's info on this implementation, so it's not as efficient
+// as it could be on search stage.
+// Manber and Myers algorithm, 1991.
+std::vector<int> BuildSuffixArray(const std::string &text) {
+  int n = static_cast<int>(text.size());
 
-   int answer=0;
-   int n = txt.length();
-   int m = pat.length();
-   //cout<<"about to do leqm"<<endl;
-    if (ltm(txt.substr(sa[n-1]), pat, m)){
-        answer=n;
-    }else if (leqm(pat, txt.substr(sa[0]), m)){
-        answer= 0;
+  std::vector<int> pos(n);  // Final suffix array.
+  std::vector<int> prm(n);  // prm = pos ** (-1).
+  std::vector<bool> bh(n);  // bh[i] == true iff pos[i] contains the leftmost suffix of a h-bucket.
 
-    }else{
-        int l=0;
-        int r=n-1;
-        while ((r-l)>1){
-            int h = (l+r)/2;
-            if (leqm(pat, txt.substr(sa[h]), m)){
-                r = h;
-            }else{
-                l = h;
-            }
+  // Auxiliar arrays.
+  std::vector<int> count(n);
+  std::vector<bool> b2h(n);
+
+  // Sorting base case.
+  for (int i = 0; i < n; ++i) {
+    pos[i] = i;
+  }
+
+  std::sort(pos.begin(), pos.end(), [&text] (int i, int j) -> bool { return text[i] < text[j]; });
+
+  bh[0] = true;
+  for (int i = 1; i < n; ++i) {
+    bh[i] = text[pos[i-1]] != text[pos[i]];
+  }
+
+  std::fill(b2h.begin(), b2h.end(), false);
+  std::vector<int> next_suffix(n);  // Gets next suffix on a h-bucket.
+
+  // Inductive step.
+  for (int h = 1; h < n; h <<= 1) {
+    int i = 0;
+    int j = 1;
+    int num_buckets = 0;
+
+    while (i < n) {
+      // Get next suffix such that text[pos[i]] !=_h text[pos[j]].
+      while (j < n && !bh[j]) ++j;
+      next_suffix[i] = j;
+      i = j;     
+      j = i + 1;
+      ++num_buckets;
+    }
+
+    // If the number of buckets is n, then the suffix array is already sorted; else, continue.
+    if (num_buckets == n) {
+      break;
+    }
+
+    for (int i = 0; i < n; i = next_suffix[i]) {
+      count[i] = 0;
+      for (int c = i; c < next_suffix[i]; ++c) {
+        prm[pos[c]] = i;
+      }
+    }
+
+    int d = n - h;
+    int e = prm[d];
+    prm[d] = e + count[e];
+    ++count[e];
+    b2h[prm[d]] = true;
+
+    for (int i = 0; i < n; i = next_suffix[i]) {
+      for (int c = i; c < next_suffix[i]; ++c) {
+        d = pos[c] - h;
+
+        if (d >= 0) {
+          e = prm[d];
+          prm[d] = e + count[e];
+          ++count[e];
+          b2h[prm[d]] = true;
         }
-        answer= r;
-    }
-    //cout<<"finished leqm"<<endl;
-    return answer;
-}
-int pred1(const std::string &txt,std::vector<int> sa,const std::string &pat){
-    int n = txt.length();
-    int m = pat.length();
-    int answer=0;
-    if (ltm(txt.substr(sa[0]),pat, m)){
-        answer=-1;
-    }
-    else if (leqm(txt.substr(sa[n-1]), pat, m)){
-        answer=n-1;
-    }
-    else{
-        int l=0, r = n-1;
-        while ((r-l)>1){
-            int h = (l+r)/2;
-            if (leqm(txt.substr(sa[h]), pat, m)){
-                l = h;
-            }
-            else{
-                r = h;
-            }
+      }
+
+      for (int c = i; c < next_suffix[i]; ++c) {
+        d = pos[c] - h;
+
+        if (d >= 0 && b2h[prm[d]]) {
+          for (int f = prm[d] + 1; !bh[f] && b2h[f]; ++f) {
+            b2h[f] = false;
+          }
         }
-        answer= l;
+      }
     }
-    return answer;
-}
-std::vector<int> sorti (std::vector<string> suff,std::vector<int> index){
-    int n=suff[0].length();
-    for(int i=0;i<n-1;i++){
-        if(suff[i]>suff[i+1]){
-            string temp1=suff[i];
-            int temp2=index[i];
-            suff[i]=suff[i+1];
-            suff[i+1]=temp1;
-            index[i]=index[i+1];
-            index[i+1]=temp2;
-            i=max(i-2,-1);
-        }
-
+    
+    for (int i = 0; i < n; ++i) {
+      pos[prm[i]] = i;
+      bh[i] = bh[i] || b2h[i];
     }
+  }
 
-    return index;
-
+  return pos;
 }
-std::vector<int> build_sarr_naive(const std::string &txt){
-    int n = txt.length();
-    std::vector<string> suff(n);
-    std::vector <int> index(n);
-    for(int i=0;i<n;i++){
-        //cout<<i;
-        suff[i]=txt.substr(i);
-        index[i]=i;
-    }
-    //print suff;
 
-    index=sorti(suff,index);
-     for(int i=0;i<n;i++){
-        cout<<index[i]<<endl;
-     }
-    //print suff;
-    //cout<<"sorti"<<endl;
-
-    return index;
-}
-//int sufArray()
-//{
-//    std::string txt = "baobab";
-
-//    std::vector<int> sa = build_sarr_naive(txt);
-//    //print sa;
-//    std::string pat= "ba";
-//    cout<<"here"<<endl;
-
-//    int l = succ1(txt, sa, pat);
-//    cout<<"succ1";
-//    //print "succ=",L
-//    int r = pred1(txt, sa, pat);
-//    cout<<l<<""<<r<<endl;
-//    //print "pred=", R
-//    std::vector<int> occ(l-r);
-//    for (int k=r+1;k<l+1;k++){
-//        occ[k-r-1]=sa[k];
-//    }
-//    //occ.sort();
-//    //print occ;
-//    //cout<<"sequence:"<<endl;
-
-//    
-//    return 0;
-//}
-
+}  // namespace ipmt
 

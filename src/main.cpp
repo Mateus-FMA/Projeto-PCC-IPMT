@@ -10,6 +10,7 @@
 #include "index_type.h"
 #include "huffman.h"
 #include "lz78.h"
+#include "sufarray.h"
 #include "utils.h"
 
 int main(int argc, char *argv[]) {
@@ -100,28 +101,33 @@ int main(int argc, char *argv[]) {
         ifs.read(&text[0], text.size());
 
         // TODO(Mateus/Valdemir): implementar a lógica correta dessa parte.
-        // Build index.
+        // Build index and write index file. Since we only have suffix arrays right now, we will
+        // not perform any type checking for the IndexType value.
+        std::vector<int> suffix_array = ipmt::BuildSuffixArray(text.data());
+        ipmt::WriteIndexFile(filenames[j], suffix_array, text.data(), compression_type);
+//        std::string sa_str;
+//        sa_str.reserve(suffix_array.size() * sizeof(int));
+//        sa_str.insert(0, reinterpret_cast<char*>(&*suffix_array.begin()),
+//                      suffix_array.size() * sizeof(int));
 
+//        // Encode text.
+//        if (compression_type == ipmt::CompressionType::kHuffman) {
+//          ipmt::DynamicBitset code;
+//          ipmt::CodeTable code_table;
+//          ipmt::HuffmanEncode(text.data(), &code, &code_table);
+//          std::cout << code.ToString() << std::endl;
 
-        // Encode text.
+//          ipmt::HuffmanHeapNode *root = ipmt::BuildTreeFromTable(code_table);
+//          std::string decoded_text = ipmt::HuffmanDecode(code, root);          
+//          std::cout << decoded_text << std::endl;
 
-        if (compression_type == ipmt::CompressionType::kHuffman) {
-          ipmt::DynamicBitset code;
-          ipmt::CodeTable code_table;
-          ipmt::HuffmanEncode(text.data(), &code, &code_table);
-          std::cout << code.ToString() << std::endl;
-
-          ipmt::HuffmanHeapNode *root = ipmt::BuildTreeFromTable(code_table);
-          std::string decoded_text = ipmt::HuffmanDecode(code, root);          
-          std::cout << decoded_text << std::endl;
-
-          delete root;
-        } else {
-          std::vector<std::pair<int, char>> code;
-          ipmt::LZ78Encode(text.data(), &code);
-          std::cout << std::endl;
-          std::cout << ipmt::LZ78Decode(code) << std::endl;
-        }
+//          delete root;
+//        } else {
+//          std::vector<std::pair<int, char>> code;
+//          ipmt::LZ78Encode(text.data(), &code);
+//          std::cout << std::endl;
+//          std::cout << ipmt::LZ78Decode(code) << std::endl;
+//        }
 
         // Write encoded text to index file.
       }

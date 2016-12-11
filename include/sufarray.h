@@ -6,16 +6,7 @@
 
 namespace ipmt{
 
-std::bool ltm(const std::string &a, const std::string &b, int m);
-
-std::bool leqm(const std::string &a, const std::string &b, int m);
-
-int succ1(const std::string txt,std::vector<int> sa, const std::string pat);
-
-int pred1(const std::string txt,std::vector<int> sa,const std::string pat);
-
-std::vector<int> sorti (std::vector<string> suff,std::vector<int> index);
-
+std::vector<int> BuildSuffixArray(const std::string &text);
 
 }  // namespace pmt
 
