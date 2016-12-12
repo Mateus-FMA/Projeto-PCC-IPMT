@@ -35,7 +35,8 @@ Opções do modo de indexação:
                       arquivo de índice. As opções implementadas são as seguintes: "huffman" 
                       (Algoritmo de Huffman) e "lz78" (Algoritmo de Lempel-Ziv, 1978).
   -i --indexfile      Determina qual a estrutura de indexação para utilização no modo de busca da 
-                      ferramenta. Atualmente, a única opção implementada é "sa" (vetor de sufixos).
+                      ferramenta. Atualmente, a única opção implementada é "sa" (vetor de
+                      sufixos).
 
 Opções do modo de busca:
 

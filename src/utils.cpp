@@ -22,7 +22,7 @@ void SplitFilename(const std::string &pathname, std::string *filename, std::stri
   size_t index = pathname.find_last_of("/\\");
 
   *filename = index == std::string::npos ? pathname : pathname.substr(index + 1);
-  *dir = index == std::string::npos ? "" : pathname.substr(0, index);
+  *dir = index == std::string::npos ? "" : pathname.substr(0, index) + "/";
 }
 
 std::string GetBasenameFromFilename(const std::string &filename) {
@@ -58,6 +58,7 @@ void WriteBitset(std::ofstream &writer, const DynamicBitset &code) {
   int quotient = code.size() / DynamicBitset::kWordSize;
   int bytes = code.size() % DynamicBitset::kWordSize > 0 ? quotient + 1 : quotient;
   int bits = code.size();
+
   writer.write(reinterpret_cast<const char*>(&bits), sizeof(int));
   writer.write(reinterpret_cast<const char*>(code.data()), bytes);
 }
@@ -123,13 +124,23 @@ std::string PrintOccurrences(const std::vector<int> &occurrences, const std::str
     size_t lf_index = text.find_first_of("\n", curr_pos);
     size_t occ = occurrences[j];
 
+    // Print all occurrences of the specified pattern in the current line.
     if (curr_pos <= occ && occ < lf_index) {
-      oss << text.substr(curr_pos, occ - curr_pos) << kANSIRedColor
-          << text.substr(occ, pattern_length) << kANSIResetAll
-          << text.substr(occ + pattern_length, lf_index - (occ + pattern_length)) << std::endl;
-      ++j;
-    }
+      while (true) {
+        oss << text.substr(curr_pos, occ - curr_pos) << kANSIRedColor
+            << text.substr(occ, pattern_length) << kANSIResetAll;
+        if (j + 1 == occurrences.size()) break;
 
+        size_t next_occ = occurrences[++j];
+        if (occ + pattern_length > next_occ || next_occ >= lf_index) break;
+
+        curr_pos = occ + pattern_length;
+        occ = next_occ;
+      }
+
+      oss << text.substr(occ + pattern_length, lf_index - (occ + pattern_length)) << std::endl;
+    }
+    
     curr_pos = lf_index != std::string::npos ? lf_index + 1 : lf_index;
   }
 
@@ -193,7 +204,6 @@ int ReadIndexFile(const std::string &index_filename, std::string *text,
 
     // Build tree from code table and decode index file's text.
     ipmt::HuffmanHeapNode *root = ipmt::BuildTreeFromTable(code_table);
-//    decoded_text = ipmt::HuffmanDecode(code, root);
     *text = ipmt::HuffmanDecode(code, root);
     delete root;
   } else if (!compression_type.compare("lz78")) {
@@ -211,20 +221,14 @@ int ReadIndexFile(const std::string &index_filename, std::string *text,
       reader.read(reinterpret_cast<char*>(&j), sizeof(int));
       reader.read(&c, sizeof(char));
 
-      //std::cout << '(' << j << ',' << c << ')' << std::endl;
-
       code.push_back(std::make_pair(j, c));
     }
 
     // Decode text.
     *text = ipmt::LZ78Decode(code);
-    //std::cout << decoded_text << std::endl;
   } else {  // Invalid compression type.
     return -2;
   }
-
-//  // Get original text from remaining decoded text.
-//  *text = decoded_text.substr(text_start_pos);
 
   return 0;
 }
@@ -260,6 +264,7 @@ void WriteIndexFile(const std::string &pathname, const std::vector<int> &suffix_
 
     for (auto it = code_table.begin(); it != code_table.end(); ++it) {
       writer.write(&it->first, sizeof(char));
+      //std::cout << "  Writing codeword " << it->second.ToString() << std::endl;
       WriteBitset(writer, it->second);
     }
 

@@ -1,6 +1,5 @@
 #include "lz78.h"
 
-#include <iostream>
 #include <unordered_map>
 
 namespace ipmt {

@@ -1,7 +1,6 @@
 #include "dynamic_bitset.h"
 
 #include <algorithm>
-#include <iostream>
 
 namespace ipmt {
 
@@ -32,7 +31,7 @@ void DynamicBitset::Resize() {
 
 bool DynamicBitset::operator[](int index) const {
   int word_index = index / kWordSize;
-  int bit_index = index % kWordSize;
+  int bit_index = (kWordSize - (index % kWordSize + 1));
 
   return (data_[word_index]) & (1 << bit_index);
 }
@@ -70,7 +69,7 @@ DynamicBitset DynamicBitset::GetSubsetFromInterval(int start, int end) const {
   for (int i = start; i < end; ++i) {
     if (i < size_) {
       int word_index = i / kWordSize;
-      int bit_index = i % kWordSize;
+      int bit_index = (kWordSize - (i % kWordSize + 1));
       subset.PushBack((data_[word_index]) & (1 << bit_index));
     }
   }
@@ -82,7 +81,7 @@ void DynamicBitset::PushBack(bool value) {
   if (size_ == kWordSize * capacity_) Resize();
 
   int word_index = size_ / kWordSize;
-  int bit_index = size_ % kWordSize;
+  int bit_index = (kWordSize - (size_ % kWordSize + 1));
   ++size_;
 
   if (value) data_[word_index] |= 1 << bit_index;
@@ -96,7 +95,7 @@ byte_t DynamicBitset::ReadWord(int index) const {
     int curr_index = index + i;
     if (curr_index < size_) {
       int word_index = curr_index / kWordSize;
-      int bit_index = curr_index % kWordSize;
+      int bit_index = (kWordSize - (curr_index % kWordSize + 1));
       result |= (data_[word_index]) & (1 << bit_index);
     }
   }
@@ -108,16 +107,16 @@ std::string DynamicBitset::ToString() const {
   std::string result;
   result.reserve(size_);
   
-  int bit_index = 0;
+  int bit_index = kWordSize - 1;
   int word_index = 0;
 
   for (int i = 0; i < size_; ++i) {
     char masked_bit = ((data_[word_index] & (1 << bit_index)) >> bit_index);
     result.push_back(masked_bit + '0');
-    ++bit_index;
+    --bit_index;
 
-    if (bit_index == kWordSize) {
-      bit_index = 0;
+    if (bit_index == 0) {
+      bit_index = kWordSize - 1;
       ++word_index;
     }    
   }
