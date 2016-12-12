@@ -19,8 +19,8 @@ void PrintSearchModeHelp();
 std::string PrintOccurrences(const std::vector<int> &occurrences, const std::string &text,
                              int pattern_length);
 std::vector<std::string> GetFilenames(const std::string &regex);
-void ReadIndexFile(const std::string &index_path, std::string *text,
-                   std::vector<int> *suffix_array);
+int ReadIndexFile(const std::string &index_path, std::string *text,
+                  std::vector<int> *suffix_array);
 void WriteIndexFile(const std::string &pathname, const std::vector<int> &suffix_array,
                     const std::string &text, const CompressionType &type);
 

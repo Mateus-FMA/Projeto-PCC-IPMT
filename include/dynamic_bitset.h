@@ -25,6 +25,7 @@ class DynamicBitset {
   bool operator[](int index) const;
   DynamicBitset& operator=(const DynamicBitset &bitset);
 
+  void Append(byte_t word);
   void Append(const DynamicBitset &bitset);
   DynamicBitset GetSubsetFromInterval(int start, int end) const;
   void PushBack(bool value);

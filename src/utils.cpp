@@ -1,5 +1,6 @@
 #include "utils.h"
 
+#include <algorithm>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -27,6 +28,21 @@ void SplitFilename(const std::string &pathname, std::string *filename, std::stri
 std::string GetBasenameFromFilename(const std::string &filename) {
   size_t index = filename.find_last_of(".");
   return index == std::string::npos ? filename : filename.substr(0, index);
+}
+
+DynamicBitset ReadBitset(std::ifstream &reader) {
+  DynamicBitset bitset;
+  int bytes;
+
+  reader.read(reinterpret_cast<char*>(&bytes), sizeof(int));
+
+  for (int i = 0; i < bytes; ++i) {
+    byte_t word;
+    reader.read(reinterpret_cast<char*>(&word), sizeof(byte_t));
+    bitset.Append(word);
+  }
+
+  return bitset;
 }
 
 void WriteBitset(std::ofstream &writer, const DynamicBitset &code) {
@@ -93,9 +109,60 @@ std::vector<std::string> GetFilenames(const std::string &pattern) {
   return filenames;
 }
 
-void ReadIndexFile(const std::string &index_filename, std::string *text,
+int ReadIndexFile(const std::string &index_filename, std::string *text,
                    std::vector<int> *suffix_array) {
+  std::ifstream reader(index_filename, std::ifstream::binary);
+  if (!reader) {  // Cannot open file.
+    return -1;
+  }
 
+  std::string compression_type;
+  std::getline(reader, compression_type);
+
+  if (!compression_type.compare("huffman")) {
+    // Read code table.
+    ipmt::CodeTable code_table;
+    size_t table_size;
+    reader.read(reinterpret_cast<char*>(&table_size), sizeof(size_t));
+
+    for (size_t i = 0; i < table_size; ++i) {
+      char key;
+      reader.read(&key, sizeof(char));
+      DynamicBitset codeword = ReadBitset(reader);
+      
+      code_table[key] = codeword;
+    }  
+
+    DynamicBitset code = ReadBitset(reader);
+    reader.close();
+
+    // Build tree from code table and decode index file's text.
+    ipmt::HuffmanHeapNode *root = ipmt::BuildTreeFromTable(code_table);
+    std::string decoded_text = ipmt::HuffmanDecode(code, root);
+
+    // Build suffix array.
+    size_t suff_array_size;
+    std::copy_n(decoded_text.c_str(), sizeof(size_t), &suff_array_size);
+    suffix_array->reserve(suff_array_size);
+    size_t text_start_pos = sizeof(size_t);
+
+    for (size_t i = 0; i < suff_array_size; ++i) {
+      int suff_array_entry;
+      std::copy_n(decoded_text.c_str() + text_start_pos, sizeof(int), &suff_array_entry);
+      text_start_pos += sizeof(int);
+
+      suffix_array->push_back(suff_array_entry);
+    }
+
+    // Get original text from remaining decoded text.
+    *text = decoded_text.substr(text_start_pos);
+  } else if (!compression_type.compare("lz78")) {
+
+  } else {  // Invalid compression type.
+    return -2;
+  }
+
+  return 0;
 }
 
 void WriteIndexFile(const std::string &pathname, const std::vector<int> &suffix_array,
@@ -124,13 +191,13 @@ void WriteIndexFile(const std::string &pathname, const std::vector<int> &suffix_
 
     ipmt::DynamicBitset code;
     ipmt::CodeTable code_table;
-    ipmt::HuffmanEncode(text + suff_array_string, &code, &code_table);
+    ipmt::HuffmanEncode(suff_array_string + text, &code, &code_table);
 
     // Write code table.
-    short code_table_size = static_cast<short>(code_table.size());
-    writer.write(reinterpret_cast<const char*>(&code_table_size), sizeof(short));
+    size_t code_table_size = code_table.size();
+    writer.write(reinterpret_cast<const char*>(&code_table_size), sizeof(size_t));
     for (auto it = code_table.begin(); it != code_table.end(); ++it) {
-      writer.write(reinterpret_cast<const char*>(&it->first), sizeof(char));
+      writer.write(&it->first, sizeof(char));
       WriteBitset(writer, it->second);
     }
 
@@ -140,14 +207,14 @@ void WriteIndexFile(const std::string &pathname, const std::vector<int> &suffix_
     writer << "lz78" << std::endl;
 
     std::vector<std::pair<int, char>> code;
-    ipmt::LZ78Encode(text + suff_array_string, &code);
+    ipmt::LZ78Encode(suff_array_string + text, &code);
 
     // Write encoded text.
     size_t code_size = code.size();
     writer.write(reinterpret_cast<const char*>(&code_size), sizeof(size_t));
     for (size_t i = 0; i < code_size; ++i) {
       writer.write(reinterpret_cast<const char*>(&code[i].first), sizeof(int));
-      writer.write(reinterpret_cast<const char*>(&code[i].second), sizeof(char));
+      writer.write(&code[i].second, sizeof(char));
     }
   }
 }

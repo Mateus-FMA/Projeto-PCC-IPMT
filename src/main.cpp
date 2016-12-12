@@ -168,16 +168,55 @@ int main(int argc, char *argv[]) {
       c = getopt_long(argc, argv, "chp", long_options, &option_index);
     }
 
-    if (optind >= argc) {
+    if (optind >= argc + 1) {
       std::cout << "Incorrect number of arguments (type ipmt --help for more details)."
                 << std::endl;
       return EXIT_FAILURE;
     }
 
     // ## Read patterns from arguments.
+    std::vector<std::string> patterns;
+
+    if (read_pattern_files) {
+      std::vector<std::string> pattern_files = ipmt::GetFilenames(argv[optind++]);
+      for (size_t i = 0; i < pattern_files.size(); ++i) {
+        std::ifstream ifs(pattern_files[i], std::ifstream::binary);
+        if (!ifs) {
+          std::cout << "Cannot open pattern file(s) from argument list." << std::endl;
+          return EXIT_FAILURE;
+        }
+
+        std::string line;
+        while (std::getline(ifs, line)) {
+          patterns.push_back(line);
+        }
+      }
+    } else {
+      patterns.push_back(argv[optind++]);
+    }
 
     // ## For each index file, decode text and find patterns occurrences.
+    bool has_multiple_index_files = (argc - optind) > 1;
+    for (int i = optind; i < argc; ++i) {
+      std::vector<std::string> index_files = ipmt::GetFilenames(argv[i]);
+      has_multiple_index_files |= index_files.size() > 1;
 
+      for (size_t j = 0; j < index_files.size(); ++j) {
+        std::vector<int> suffix_array;
+        std::string text;
+        int status = ipmt::ReadIndexFile(index_files[j], &text, &suffix_array);
+
+        if (status == -1) {
+          std::cout << "Cannot open index file " << index_files[j] << "." << std::endl;
+          return EXIT_FAILURE;
+        } else if (status == -2) {
+          std::cout << "Invalid compression type on index file." << std::endl;
+          return EXIT_FAILURE;
+        } else {  // status == 0.
+          std::cout << text << std::endl;
+        }
+      }
+    }
   } else if (!mode.compare("-h") || !mode.compare("--help")) {
     ipmt::PrintHelp();
   } else {

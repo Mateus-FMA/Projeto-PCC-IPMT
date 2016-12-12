@@ -52,6 +52,12 @@ DynamicBitset& DynamicBitset::operator=(const DynamicBitset &bitset) {
   return *this;
 }
 
+void DynamicBitset::Append(byte_t word) {
+  for (int i = kWordSize - 1; i >= 0; --i) {
+    PushBack(word & (1 << i));
+  }
+}
+
 void DynamicBitset::Append(const DynamicBitset &bitset) {
   for (int i = 0; i < bitset.size(); ++i) {
     PushBack(bitset[i]);
