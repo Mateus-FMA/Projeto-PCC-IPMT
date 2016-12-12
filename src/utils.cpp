@@ -157,22 +157,29 @@ int ReadIndexFile(const std::string &index_filename, std::string *text,
     // Get original text from remaining decoded text.
     *text = decoded_text.substr(text_start_pos);
   } else if (!compression_type.compare("lz78")) {
-    ipmt::CodeTable code_table;
-    size_t table_size;
-    reader.read(reinterpret_cast<char*>(&table_size), sizeof(size_t));
+    
+    //here starts lz78
+
+    size_t code_size;
+    reader.read(reinterpret_cast<char*>(&code_size), sizeof(size_t));
+    cout<<"here 1"<<endl;
     int index;
     char misplace;
     std::vector<std::pair<int, char>> code;
-    for(size_t i=0;i<table_size;++i){
+    cout<<"here 2"<<endl;
+    for(size_t i=0;i<code_size;++i){
 	reader.read(reinterpret_cast<char*>(&index), sizeof(int));
 	reader.read(&misplace,sizeof(char));
 	code[i].first=index;
         code[i].second=misplace;
     }
+    cout<<"here 3"<<endl;
+    reader.close();
     size_t suff_array_size;
     std::string decoded_text=ipmt::LZ78Decode(code);
     std::copy_n(decoded_text.c_str(), sizeof(size_t), &suff_array_size);
     suffix_array->reserve(suff_array_size);
+    cout<<"here 4"<<endl;
     size_t text_start_pos = sizeof(size_t);
     for (size_t i = 0; i < suff_array_size; ++i) {
       int suff_array_entry;
@@ -181,11 +188,10 @@ int ReadIndexFile(const std::string &index_filename, std::string *text,
 
       suffix_array->push_back(suff_array_entry);
     }
+    cout<<"here 5"<<endl;
     *text = decoded_text.substr(text_start_pos);
-   //for (size_t i = 0; i < code_size; ++i) {
-      //writer.write(reinterpret_cast<const char*>(&code[i].first), sizeof(int));
-      //writer.write(&code[i].second, sizeof(char));
-    //}
+
+    // here it ends
 
   } else {  // Invalid compression type.
     return -2;

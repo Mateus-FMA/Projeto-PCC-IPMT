@@ -139,10 +139,9 @@ int main(int argc, char *argv[]) {
       {"help", no_argument, nullptr, 'h'},
       {"pattern", no_argument, nullptr, 'p'}
     };
-
+    
     int option_index = 0;
     int c = getopt_long(argc, argv, "chp", long_options, &option_index);
-
     bool print_num_occ_only = false;
     bool read_pattern_files = false;
     
