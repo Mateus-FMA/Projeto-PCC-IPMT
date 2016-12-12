@@ -105,31 +105,6 @@ int main(int argc, char *argv[]) {
         // not perform any type checking for the IndexType value.
         std::vector<int> suffix_array = ipmt::BuildSuffixArray(text.data());
         ipmt::WriteIndexFile(filenames[j], suffix_array, text.data(), compression_type);
-//        std::string sa_str;
-//        sa_str.reserve(suffix_array.size() * sizeof(int));
-//        sa_str.insert(0, reinterpret_cast<char*>(&*suffix_array.begin()),
-//                      suffix_array.size() * sizeof(int));
-
-//        // Encode text.
-//        if (compression_type == ipmt::CompressionType::kHuffman) {
-//          ipmt::DynamicBitset code;
-//          ipmt::CodeTable code_table;
-//          ipmt::HuffmanEncode(text.data(), &code, &code_table);
-//          std::cout << code.ToString() << std::endl;
-
-//          ipmt::HuffmanHeapNode *root = ipmt::BuildTreeFromTable(code_table);
-//          std::string decoded_text = ipmt::HuffmanDecode(code, root);          
-//          std::cout << decoded_text << std::endl;
-
-//          delete root;
-//        } else {
-//          std::vector<std::pair<int, char>> code;
-//          ipmt::LZ78Encode(text.data(), &code);
-//          std::cout << std::endl;
-//          std::cout << ipmt::LZ78Decode(code) << std::endl;
-//        }
-
-        // Write encoded text to index file.
       }
     }
   } else if (!mode.compare("search")){
@@ -213,7 +188,23 @@ int main(int argc, char *argv[]) {
           std::cout << "Invalid compression type on index file." << std::endl;
           return EXIT_FAILURE;
         } else {  // status == 0.
-          std::cout << text << std::endl;
+          std::vector<int> occurrences;
+          size_t total = 0;
+
+          for (size_t k = 0; k < patterns.size(); ++k) {
+            occurrences = ipmt::GetOccurrences(patterns[k], text, suffix_array);
+            if (!print_num_occ_only) {
+              std::cout << ipmt::PrintOccurrences(occurrences, text, patterns[k].size());
+            }
+
+            total += occurrences.size();
+          }
+
+          if (print_num_occ_only && has_multiple_index_files) {
+            std::cout << index_files[j] << ":" << total << std::endl;
+          } else if (print_num_occ_only) {
+            std::cout << total << std::endl;
+          }
         }
       }
     }

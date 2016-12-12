@@ -16,8 +16,10 @@ void PrintHelp();
 void PrintIndexModeHelp();
 void PrintSearchModeHelp();
 
+std::vector<int> GetOccurrences(const std::string &pattern, const std::string &text,
+                                const std::vector<int> &suffix_array);
 std::string PrintOccurrences(const std::vector<int> &occurrences, const std::string &text,
-                             int pattern_length);
+                             size_t pattern_length);
 std::vector<std::string> GetFilenames(const std::string &regex);
 int ReadIndexFile(const std::string &index_path, std::string *text,
                   std::vector<int> *suffix_array);

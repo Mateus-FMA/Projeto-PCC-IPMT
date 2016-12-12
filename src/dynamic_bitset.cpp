@@ -5,7 +5,7 @@
 
 namespace ipmt {
 
-const int DynamicBitset::kWordSize = 8;
+const int DynamicBitset::kWordSize = 8 * sizeof(byte_t);
 
 DynamicBitset::DynamicBitset(const DynamicBitset &bitset)
     : data_(new byte_t[bitset.capacity()]),

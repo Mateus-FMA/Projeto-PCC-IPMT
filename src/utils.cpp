@@ -32,14 +32,23 @@ std::string GetBasenameFromFilename(const std::string &filename) {
 
 DynamicBitset ReadBitset(std::ifstream &reader) {
   DynamicBitset bitset;
-  int bytes;
+  int bits;
+  reader.read(reinterpret_cast<char*>(&bits), sizeof(int));
 
-  reader.read(reinterpret_cast<char*>(&bytes), sizeof(int));
+  int quotient = bits / DynamicBitset::kWordSize;
+  int bytes = bits % DynamicBitset::kWordSize > 0 ? quotient + 1 : quotient;
+  int curr_bit = 0;
 
   for (int i = 0; i < bytes; ++i) {
     byte_t word;
     reader.read(reinterpret_cast<char*>(&word), sizeof(byte_t));
-    bitset.Append(word);
+
+    for (int j = DynamicBitset::kWordSize - 1; j >= 0; --j) {
+      if (curr_bit < bits) {
+        bitset.PushBack(word & (1 << j));
+        ++curr_bit;
+      }
+    }
   }
 
   return bitset;
@@ -48,7 +57,8 @@ DynamicBitset ReadBitset(std::ifstream &reader) {
 void WriteBitset(std::ofstream &writer, const DynamicBitset &code) {
   int quotient = code.size() / DynamicBitset::kWordSize;
   int bytes = code.size() % DynamicBitset::kWordSize > 0 ? quotient + 1 : quotient;
-  writer.write(reinterpret_cast<const char*>(&bytes), sizeof(int));
+  int bits = code.size();
+  writer.write(reinterpret_cast<const char*>(&bits), sizeof(int));
   writer.write(reinterpret_cast<const char*>(code.data()), bytes);
 }
 
@@ -79,15 +89,48 @@ void PrintSearchModeHelp() {
             << " the text." << std::endl;
 }
 
-std::string PrintOccurrences(const std::vector<int> &occurrences, const std::string &text,
-                             int pattern_length) {
-  std::ostringstream oss;
-  int curr_pos = 0;
+std::vector<int> GetOccurrences(const std::string &pattern, const std::string &text,
+                                const std::vector<int> &suffix_array) {
+  auto leqm = [&text] (int i, const std::string &pattern) -> bool {
+    return text.compare(i, pattern.size(), pattern) < 0;
+  };
 
-  for (size_t j = 0; j < occurrences.size(); ++j) {
-    oss << text.substr(curr_pos, occurrences[j] - curr_pos) << kANSIRedColor
-        << text.substr(occurrences[j], pattern_length) << kANSIResetAll;
-    curr_pos = occurrences[j] + pattern_length;
+  auto geqm = [&text] (const std::string &pattern, int i) -> bool {
+    return text.compare(i, pattern.size(), pattern) > 0;
+  };
+
+  std::vector<int> occurrences;
+  auto l = lower_bound(suffix_array.begin(), suffix_array.end(), pattern, leqm);
+  auto r = upper_bound(l, suffix_array.end(), pattern, geqm);
+  occurrences.reserve(r - l);
+
+  for (auto it = l; it != r; ++it) {
+    occurrences.push_back(*it);
+  }
+
+  std::sort(occurrences.begin(), occurrences.end());
+
+  return occurrences;
+}
+
+std::string PrintOccurrences(const std::vector<int> &occurrences, const std::string &text,
+                             size_t pattern_length) {
+  std::ostringstream oss;
+  size_t curr_pos = 0;
+  size_t j = 0;
+
+  while (curr_pos != std::string::npos && j < occurrences.size()) {
+    size_t lf_index = text.find_first_of("\n", curr_pos);
+    size_t occ = occurrences[j];
+
+    if (curr_pos <= occ && occ < lf_index) {
+      oss << text.substr(curr_pos, occ - curr_pos) << kANSIRedColor
+          << text.substr(occ, pattern_length) << kANSIResetAll
+          << text.substr(occ + pattern_length, lf_index - (occ + pattern_length)) << std::endl;
+      ++j;
+    }
+
+    curr_pos = lf_index != std::string::npos ? lf_index + 1 : lf_index;
   }
 
   return oss.str();
@@ -116,7 +159,19 @@ int ReadIndexFile(const std::string &index_filename, std::string *text,
     return -1;
   }
 
+  // Build suffix array.
+  size_t suff_array_size;
+  reader.read(reinterpret_cast<char*>(&suff_array_size), sizeof(size_t));
+  suffix_array->reserve(suff_array_size);
+
+  for (size_t i = 0; i < suff_array_size; ++i) {
+    int suff_array_entry;
+    reader.read(reinterpret_cast<char*>(&suff_array_entry), sizeof(int));
+    suffix_array->push_back(suff_array_entry);
+  }
+
   std::string compression_type;
+  std::string decoded_text;
   std::getline(reader, compression_type);
 
   if (!compression_type.compare("huffman")) {
@@ -129,7 +184,7 @@ int ReadIndexFile(const std::string &index_filename, std::string *text,
       char key;
       reader.read(&key, sizeof(char));
       DynamicBitset codeword = ReadBitset(reader);
-      
+
       code_table[key] = codeword;
     }  
 
@@ -138,29 +193,38 @@ int ReadIndexFile(const std::string &index_filename, std::string *text,
 
     // Build tree from code table and decode index file's text.
     ipmt::HuffmanHeapNode *root = ipmt::BuildTreeFromTable(code_table);
-    std::string decoded_text = ipmt::HuffmanDecode(code, root);
+//    decoded_text = ipmt::HuffmanDecode(code, root);
+    *text = ipmt::HuffmanDecode(code, root);
+    delete root;
+  } else if (!compression_type.compare("lz78")) {
+    // Read code size.
+    size_t code_size;
+    reader.read(reinterpret_cast<char*>(&code_size), sizeof(size_t));
 
-    // Build suffix array.
-    size_t suff_array_size;
-    std::copy_n(decoded_text.c_str(), sizeof(size_t), &suff_array_size);
-    suffix_array->reserve(suff_array_size);
-    size_t text_start_pos = sizeof(size_t);
+    std::vector<std::pair<int, char>> code;
+    code.reserve(code_size);
 
-    for (size_t i = 0; i < suff_array_size; ++i) {
-      int suff_array_entry;
-      std::copy_n(decoded_text.c_str() + text_start_pos, sizeof(int), &suff_array_entry);
-      text_start_pos += sizeof(int);
+    for (size_t i = 0; i < code_size; ++i) {
+      int j;
+      char c;
 
-      suffix_array->push_back(suff_array_entry);
+      reader.read(reinterpret_cast<char*>(&j), sizeof(int));
+      reader.read(&c, sizeof(char));
+
+      //std::cout << '(' << j << ',' << c << ')' << std::endl;
+
+      code.push_back(std::make_pair(j, c));
     }
 
-    // Get original text from remaining decoded text.
-    *text = decoded_text.substr(text_start_pos);
-  } else if (!compression_type.compare("lz78")) {
-
+    // Decode text.
+    *text = ipmt::LZ78Decode(code);
+    //std::cout << decoded_text << std::endl;
   } else {  // Invalid compression type.
     return -2;
   }
+
+//  // Get original text from remaining decoded text.
+//  *text = decoded_text.substr(text_start_pos);
 
   return 0;
 }
@@ -173,16 +237,13 @@ void WriteIndexFile(const std::string &pathname, const std::vector<int> &suffix_
 
   std::string index_path = dir + GetBasenameFromFilename(filename) + ".idx";
   std::ofstream writer(index_path, std::ofstream::binary);
-  
-  // Stringify suffix array content.
-  std::string suff_array_string;
-  size_t sa_size = suffix_array.size();
-  //writer.write(reinterpret_cast<const char*>(&sa_size), sizeof(size_t));
-  suff_array_string.append(reinterpret_cast<const char*>(&sa_size), sizeof(size_t));
 
-  for (size_t i = 0; i < suffix_array.size(); ++i) {
-    //writer.write(reinterpret_cast<const char*>(&suffix_array[i]), sizeof(int));
-    suff_array_string.append(reinterpret_cast<const char*>(&suffix_array[i]), sizeof(int));
+  // Write suffix array content to index file.
+  size_t suff_array_size = suffix_array.size();
+  writer.write(reinterpret_cast<const char*>(&suff_array_size), sizeof(size_t));
+
+  for (size_t i = 0; i < suff_array_size; ++i) {
+    writer.write(reinterpret_cast<const char*>(&suffix_array[i]), sizeof(int));
   }
 
   // Write which compression algorithm was used.
@@ -191,11 +252,12 @@ void WriteIndexFile(const std::string &pathname, const std::vector<int> &suffix_
 
     ipmt::DynamicBitset code;
     ipmt::CodeTable code_table;
-    ipmt::HuffmanEncode(suff_array_string + text, &code, &code_table);
+    ipmt::HuffmanEncode(text, &code, &code_table);
 
     // Write code table.
     size_t code_table_size = code_table.size();
     writer.write(reinterpret_cast<const char*>(&code_table_size), sizeof(size_t));
+
     for (auto it = code_table.begin(); it != code_table.end(); ++it) {
       writer.write(&it->first, sizeof(char));
       WriteBitset(writer, it->second);
@@ -207,11 +269,12 @@ void WriteIndexFile(const std::string &pathname, const std::vector<int> &suffix_
     writer << "lz78" << std::endl;
 
     std::vector<std::pair<int, char>> code;
-    ipmt::LZ78Encode(suff_array_string + text, &code);
+    ipmt::LZ78Encode(text, &code);
 
     // Write encoded text.
     size_t code_size = code.size();
     writer.write(reinterpret_cast<const char*>(&code_size), sizeof(size_t));
+
     for (size_t i = 0; i < code_size; ++i) {
       writer.write(reinterpret_cast<const char*>(&code[i].first), sizeof(int));
       writer.write(&code[i].second, sizeof(char));
