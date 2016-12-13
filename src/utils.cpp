@@ -258,13 +258,19 @@ void WriteIndexFile(const std::string &pathname, const std::vector<int> &suffix_
     ipmt::CodeTable code_table;
     ipmt::HuffmanEncode(text, &code, &code_table);
 
+//    double ratio = static_cast<double>(code.size()) / (DynamicBitset::kWordSize * text.size());
+
+//    std::cout << "Uncompressed text size: " << text.size() << " bytes." << std::endl;
+//    std::cout << "Compressed text size: " << code.size() / DynamicBitset::kWordSize << " bytes."
+//              << std::endl;
+//    std::cout << "Compression ratio: " << ratio << std::endl;
+
     // Write code table.
     size_t code_table_size = code_table.size();
     writer.write(reinterpret_cast<const char*>(&code_table_size), sizeof(size_t));
 
     for (auto it = code_table.begin(); it != code_table.end(); ++it) {
       writer.write(&it->first, sizeof(char));
-      //std::cout << "  Writing codeword " << it->second.ToString() << std::endl;
       WriteBitset(writer, it->second);
     }
 
@@ -275,6 +281,13 @@ void WriteIndexFile(const std::string &pathname, const std::vector<int> &suffix_
 
     std::vector<std::pair<int, char>> code;
     ipmt::LZ78Encode(text, &code);
+
+//    double ratio = static_cast<double>((sizeof(int) + sizeof(char)) * code.size()) / text.size();
+
+//    std::cout << "Uncompressed text size: " << text.size() << " bytes." << std::endl;
+//    std::cout << "Compressed text size: " << (sizeof(int) + sizeof(char)) * code.size() 
+//              << " bytes." << std::endl;
+//    std::cout << "Compression ratio: " << ratio << std::endl;
 
     // Write encoded text.
     size_t code_size = code.size();

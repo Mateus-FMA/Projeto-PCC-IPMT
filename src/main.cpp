@@ -100,7 +100,6 @@ int main(int argc, char *argv[]) {
         std::vector<char> text(file_size);
         ifs.read(&text[0], text.size());
 
-        // TODO(Mateus/Valdemir): implementar a lógica correta dessa parte.
         // Build index and write index file. Since we only have suffix arrays right now, we will
         // not perform any type checking for the IndexType value.
         std::vector<int> suffix_array = ipmt::BuildSuffixArray(text.data());
