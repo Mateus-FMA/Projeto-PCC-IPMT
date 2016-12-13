@@ -10,5 +10,5 @@ std::vector<int> BuildSuffixArray(const std::string &text);
 
 }  // namespace pmt
 
-#endif  // PMT_INCLUDE_SELLERS_H_
+#endif  // IPMT_INCLUDE_SUFARRAY_H_
 
